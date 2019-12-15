@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-jiabinl.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-jiabinl.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="Jiabin's Blog" type="application/atom+xml">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="问题定义 有一个背包，他的容量为 C (Capacity)。现在有n中不同的物品，编号为 0…n-1，其中每一件物品的重量为 w(i)，价值为 v(i)。问可以向这个背包中盛放哪些物品，使得在不超过背包容量的基础上，物品的总价值最大。 解决方法状态定义 对于这类组合问题，需要用两个变量来定义状态。  用 f(n, c) 表示将 n 个物品放进容量为 c 的背包可以获得的最大值。">
+<meta name="keywords" content="算法, 动态规划, 背包问题">
+<meta property="og:type" content="article">
+<meta property="og:title" content="0-1 背包问题">
+<meta property="og:url" content="http:&#x2F;&#x2F;yoursite.com&#x2F;2019&#x2F;12&#x2F;14&#x2F;0-1-knapsack-problem&#x2F;index.html">
+<meta property="og:site_name" content="Jiabin&#39;s Blog">
+<meta property="og:description" content="问题定义 有一个背包，他的容量为 C (Capacity)。现在有n中不同的物品，编号为 0…n-1，其中每一件物品的重量为 w(i)，价值为 v(i)。问可以向这个背包中盛放哪些物品，使得在不超过背包容量的基础上，物品的总价值最大。 解决方法状态定义 对于这类组合问题，需要用两个变量来定义状态。  用 f(n, c) 表示将 n 个物品放进容量为 c 的背包可以获得的最大值。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-12-15T13:54:59.513Z">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://yoursite.com/2019/12/14/0-1-knapsack-problem/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>0-1 背包问题 | Jiabin's Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Jiabin's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/12/14/0-1-knapsack-problem/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Jiabin">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Jiabin's Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          0-1 背包问题
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-12-14 20:26:18" itemprop="dateCreated datePublished" datetime="2019-12-14T20:26:18+08:00">2019-12-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-12-15 21:54:59" itemprop="dateModified" datetime="2019-12-15T21:54:59+08:00">2019-12-15</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="问题定义"><a href="#问题定义" class="headerlink" title="问题定义"></a>问题定义</h2><blockquote>
+<p>有一个背包，他的容量为 C (Capacity)。现在有n中不同的物品，编号为 0…n-1，其中每一件物品的重量为 w(i)，价值为 v(i)。问可以向这个背包中盛放哪些物品，使得在不超过背包容量的基础上，物品的总价值最大。</p>
+</blockquote><h2 id="解决方法"><a href="#解决方法" class="headerlink" title="解决方法"></a>解决方法</h2><h3 id="状态定义"><a href="#状态定义" class="headerlink" title="状态定义"></a>状态定义</h3><blockquote>
+<p>对于这类组合问题，需要用两个变量来定义状态。</p>
+</blockquote><blockquote>
+<p>用 f(n, c) 表示将 n 个物品放进容量为 c 的背包可以获得的最大值。</p>
+</blockquote><a id="more"></a>
+
+
+<h3 id="状态转移"><a href="#状态转移" class="headerlink" title="状态转移"></a>状态转移</h3><p>对于物品 i，有两个选择：不放进背包和放进背包，对应的结果分别为 <code>f(i-1, c)</code> 和 <code>f(i-1, c-w[i]) + v[i]</code> 。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">f(i, c) = max&#123; f(i-<span class="number">1</span>, c), f(i-<span class="number">1</span>, c-w(i)) + v(i) &#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="动态规划"><a href="#动态规划" class="headerlink" title="动态规划"></a>动态规划</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Java 二维数组实现</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">knapstack01</span><span class="params">(<span class="keyword">int</span>[] w, <span class="keyword">int</span>[] v, <span class="keyword">int</span> C)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 初始化 dp[0][c]=0</span></span><br><span class="line">    <span class="keyword">int</span> n = w.length; <span class="comment">// 物品数量</span></span><br><span class="line">    <span class="keyword">int</span>[][] dp = <span class="keyword">new</span> <span class="keyword">int</span>[n][C+<span class="number">1</span>];</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 递推</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; n; i++) &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> c = <span class="number">1</span>; c &lt;= C; c++) &#123;</span><br><span class="line">            <span class="keyword">if</span> (w[i] &gt; c) &#123; <span class="comment">// 放不进背包</span></span><br><span class="line">                dp[i][c] = dp[i - <span class="number">1</span>][c];</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                dp[i][c] = Math.max(dp[i - <span class="number">1</span>][c], dp[i - <span class="number">1</span>][c - w[i]] + v[i]);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  </span><br><span class="line">    <span class="keyword">return</span> dp[n][C];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>时间复杂度和空间复杂度均为 <code>O(nC)</code>。</p>
+<h3 id="空间优化"><a href="#空间优化" class="headerlink" title="空间优化"></a>空间优化</h3><p>根据状态转义方程可以看出，i 个物品的结果只依赖于 i-1 个物品的结果，所以我们在动规时只需要记录上次的结果。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Java 两行数组实现</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">knapstack01</span><span class="params">(<span class="keyword">int</span>[] w, <span class="keyword">int</span>[] v, <span class="keyword">int</span> C)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 初始化 dp[0][c]=0</span></span><br><span class="line">    <span class="keyword">int</span> n = w.length; <span class="comment">// 物品数量</span></span><br><span class="line">    <span class="keyword">int</span>[][] dp = <span class="keyword">new</span> <span class="keyword">int</span>[<span class="number">2</span>][C+<span class="number">1</span>];</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 递推</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; n; i++) &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> c = <span class="number">1</span>; c &lt;= C; c++) &#123;</span><br><span class="line">            <span class="keyword">if</span> (w[i] &gt; c) &#123; <span class="comment">// 放不进背包</span></span><br><span class="line">                dp[i % <span class="number">2</span>][c] = dp[(i - <span class="number">1</span>) % <span class="number">2</span>][c];</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                dp[i % <span class="number">2</span>][c] = Math.max(dp[(i - <span class="number">1</span>) % <span class="number">2</span>][c], dp[(i - <span class="number">1</span>) % <span class="number">2</span>][c - w[i]] + v[i]);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  </span><br><span class="line">    <span class="keyword">return</span> dp[n % <span class="number">2</span>][C];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>空间复杂度：<code>O(2C)</code></p>
+<p>其实我们还可以只用一个一维数组。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Java 一维数组实现</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">knapstack01</span><span class="params">(<span class="keyword">int</span>[] w, <span class="keyword">int</span>[] v, <span class="keyword">int</span> C)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 初始化 dp[0][c]=0</span></span><br><span class="line">    <span class="keyword">int</span> n = w.length; <span class="comment">// 物品数量</span></span><br><span class="line">    <span class="keyword">int</span>[] dp = <span class="keyword">new</span> <span class="keyword">int</span>[C+<span class="number">1</span>];</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 递推</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; n; i++) &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> c = C; c &gt;= w[i]; c++) &#123; <span class="comment">// 注意要逆序，而且只遍历到 c&gt;=w[i] 即可</span></span><br><span class="line">            <span class="comment">// 因为逆序时，计算 i 个物品的 dp[c] 时，dp[c - w[i]] 才表示 i-1 个物品时的结果</span></span><br><span class="line">            <span class="comment">// 如果是正序，计算 i 个物品的 dp[c] 时，dp[c - w[i]] 已经是 i 个物品时的结果</span></span><br><span class="line">            dp[c] = Math.max(dp[c], dp[c - w[i]] + v[i]);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  </span><br><span class="line">    <span class="keyword">return</span> dp[C];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="问题变种"><a href="#问题变种" class="headerlink" title="问题变种"></a>问题变种</h2><h3 id="分割等和子集"><a href="#分割等和子集" class="headerlink" title="分割等和子集"></a>分割等和子集</h3><blockquote>
+<p>给定一个<strong>只包含正整数</strong>的<strong>非空</strong>数组 nums。是否可以将这个数组分割成两个子集，使得两个子集的元素和相等。</p>
+<p>来源：<a href="https://leetcode-cn.com/problems/partition-equal-subset-sum/" target="_blank" rel="noopener">https://leetcode-cn.com/problems/partition-equal-subset-sum/</a></p>
+</blockquote>
+<p>问题转换：假设所以正数的和为 sum，那么问题就可以转换为求是否存在一组数的和刚好为 sum/2。</p>
+<p>对应背包问题：背包容量 C=sum/2，物品数量 n=nums.length，<strong>状态 f(i, c) 表示给定 i 个物品时是否存在一组物品的重量和刚好为 c</strong>，状态转移方程为 <code>f(i, c) = f(i-1, c) || f(i-1, c-w[i])</code>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">canPartition</span><span class="params">(<span class="keyword">int</span>[] nums)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> sum = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> x : nums) &#123;</span><br><span class="line">            sum += x;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (sum % <span class="number">2</span> &gt; <span class="number">0</span>) &#123;</span><br><span class="line">          <span class="keyword">return</span> <span class="keyword">false</span>; <span class="comment">// 总和为奇数时，不可能划分成两个相等的子集</span></span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">int</span> n = nums.length;</span><br><span class="line">        <span class="keyword">int</span> C = sum / <span class="number">2</span>;</span><br><span class="line">        <span class="keyword">int</span>[] w = nums;</span><br><span class="line">        <span class="keyword">boolean</span>[] dp = <span class="keyword">new</span> <span class="keyword">boolean</span>[C + <span class="number">1</span>];</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 初始化，对应第 0 个物品，只有容量 c==w[i] 时，状态 dp[c]=true</span></span><br><span class="line">        <span class="comment">// 也可简化为 if (nums[0] &lt;= C) dp[nums[0]] = true;</span></span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> c = <span class="number">0</span>; c &lt;= C; c++) &#123;</span><br><span class="line">            dp[c] = c == nums[<span class="number">0</span>];</span><br><span class="line">        &#125;</span><br><span class="line">      </span><br><span class="line">        <span class="comment">// 自底向上迭代</span></span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt; n; i++) &#123;</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> c = C; c &gt;= w[i]; c--) &#123;</span><br><span class="line">                dp[c] = dp[c] || dp[c - w[i]];</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">return</span> dp[C];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="最后一块石头的重量"><a href="#最后一块石头的重量" class="headerlink" title="最后一块石头的重量"></a>最后一块石头的重量</h3><blockquote>
+<p>有一堆石头，每块石头的重量都是正整数。</p>
+<p>每一回合，从中选出<strong>任意两块石头</strong>，然后将它们一起粉碎。假设石头的重量分别为 x 和 y，且 x &lt;= y。那么粉碎的可能结果如下：</p>
+<ul>
+<li>如果 x == y，那么两块石头都会被完全粉碎；</li>
+<li>如果 x != y，那么重量为 x 的石头将会完全粉碎，而重量为 y 的石头新重量为 y-x。</li>
+</ul>
+<p>最后，最多只会剩下一块石头。返回此石头<strong>最小的可能重量</strong>。如果没有石头剩下，就返回 0。</p>
+<p>链接：<a href="https://leetcode-cn.com/problems/last-stone-weight-ii" target="_blank" rel="noopener">https://leetcode-cn.com/problems/last-stone-weight-ii</a></p>
+</blockquote>
+<p>问题转化：由于石头拿走还能放回去，因此可以简单地把所有石头看作两堆，假设总重量为 sum，如何使两堆石头总重量接近 sum/2。</p>
+<p>对应背包问题：背包容量 C=sum/2，物品数量为石头个数 n，<strong>状态 f(i, c) 表示给定 i 个物品时最大容量为 c 时背包的重量</strong>，状态转移方程为 <code>f(i, c) = max{ f(i-1, c), f(i-1, c-w[i]) + w[i] }</code>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">lastStoneWeightII</span><span class="params">(<span class="keyword">int</span>[] stones)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> sum = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i : stones) &#123;</span><br><span class="line">            sum += i;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">/* 定义 dp[i] 重量上限为 i 时背包所能装载的最大石头重量 */</span></span><br><span class="line">        <span class="keyword">int</span> n = stones.length;</span><br><span class="line">        <span class="keyword">int</span> C = sum/<span class="number">2</span>;</span><br><span class="line">        <span class="keyword">int</span>[] w = stones;</span><br><span class="line">        <span class="keyword">int</span>[] dp = <span class="keyword">new</span> <span class="keyword">int</span>[C + <span class="number">1</span>];</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; n; i++) &#123;</span><br><span class="line">            <span class="keyword">int</span> curStone = stones[i];</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> c = C; j &gt;= w[i]; c--) &#123;</span><br><span class="line">                dp[c] = Math.max(dp[c], dp[c - w[i]] + w[i]);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> sum - <span class="number">2</span> * dp[maxCapacity];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>–</p>
+<p>参考资料：</p>
+<ul>
+<li><a href="https://juejin.im/post/5b40c99ee51d45190b615f33#heading-15" target="_blank" rel="noopener">https://juejin.im/post/5b40c99ee51d45190b615f33#heading-15</a> leetcode题解（0-1背包问题）</li>
+<li><a href="https://www.zhangjc.site/archives-327/" target="_blank" rel="noopener">https://www.zhangjc.site/archives-327/</a> 1049. 最后一块石头的重量 II - Last Stone Weight II</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E7%AE%97%E6%B3%95-%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92-%E8%83%8C%E5%8C%85%E9%97%AE%E9%A2%98/" rel="tag"># 算法, 动态规划, 背包问题</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2019/12/01/learn-java-generics-quickly/" rel="next" title="快速了解Java泛型（转载）">
+                  <i class="fa fa-chevron-left"></i> 快速了解Java泛型（转载）
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2019/12/15/airplane-seat-sssignment-probability/" rel="prev" title="第 n 个乘客坐在自己位置上的概率">
+                  第 n 个乘客坐在自己位置上的概率 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#问题定义"><span class="nav-number">1.</span> <span class="nav-text">问题定义</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#解决方法"><span class="nav-number">2.</span> <span class="nav-text">解决方法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#状态定义"><span class="nav-number">2.1.</span> <span class="nav-text">状态定义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#状态转移"><span class="nav-number">2.2.</span> <span class="nav-text">状态转移</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#动态规划"><span class="nav-number">2.3.</span> <span class="nav-text">动态规划</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#空间优化"><span class="nav-number">2.4.</span> <span class="nav-text">空间优化</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#问题变种"><span class="nav-number">3.</span> <span class="nav-text">问题变种</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#分割等和子集"><span class="nav-number">3.1.</span> <span class="nav-text">分割等和子集</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#最后一块石头的重量"><span class="nav-number">3.2.</span> <span class="nav-text">最后一块石头的重量</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Jiabin</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">5</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Jiabin</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.0.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.5.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+<script src="/js/utils.js"></script><script src="/js/motion.js"></script>
+<script src="/js/schemes/pisces.js"></script>
+<script src="/js/next-boot.js"></script>
+
+
+
+  
+  <script>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
