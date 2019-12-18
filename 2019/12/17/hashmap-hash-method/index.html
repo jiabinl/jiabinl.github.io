@@ -56,7 +56,7 @@
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http:&#x2F;&#x2F;yoursite.com&#x2F;2019&#x2F;12&#x2F;17&#x2F;hashmap-hash-method&#x2F;hash-method-demo-1.png">
 <meta property="og:image" content="http:&#x2F;&#x2F;yoursite.com&#x2F;2019&#x2F;12&#x2F;17&#x2F;hashmap-hash-method&#x2F;hash-method-demo-2.png">
-<meta property="og:updated_time" content="2019-12-17T13:53:33.586Z">
+<meta property="og:updated_time" content="2019-12-18T01:03:17.444Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="http:&#x2F;&#x2F;yoursite.com&#x2F;2019&#x2F;12&#x2F;17&#x2F;hashmap-hash-method&#x2F;hash-method-demo-1.png">
 
@@ -200,10 +200,16 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
-              
 
-              <time title="创建时间：2019-12-17 21:15:57 / 修改时间：21:53:33" itemprop="dateCreated datePublished" datetime="2019-12-17T21:15:57+08:00">2019-12-17</time>
+              <time title="创建时间：2019-12-17 21:15:57" itemprop="dateCreated datePublished" datetime="2019-12-17T21:15:57+08:00">2019-12-17</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-12-18 09:03:17" itemprop="dateModified" datetime="2019-12-18T09:03:17+08:00">2019-12-18</time>
+              </span>
 
           
 
@@ -231,7 +237,7 @@
 <h2 id="原理说明"><a href="#原理说明" class="headerlink" title="原理说明"></a>原理说明</h2><p>这个与HashMap中table下标的计算有关。</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">n = table.length;</span><br><span class="line">index = （n-<span class="number">1</span>） &amp; hash;</span><br></pre></td></tr></table></figure>
 
-<p>因为，table 的长度都是2的幂，因此 index 仅与 hash 值的低 n 位有关，hash 值的高位都被与操作置为0了。<br>假设table.length=2^4=16。 </p>
+<p>因为，table 的长度都是2的幂，因此 index 仅与 hash 值的低 n 位有关，hash 值的高位都被与操作置为0了。<br>假设 table.length = 2^4 = 16。 </p>
 <p><img src="hash-method-demo-2.png" alt></p>
 <p>由上图可以看到，只有 hash 值的低4位参与了运算。 </p>
 <p>这样做很容易产生碰撞。设计者权衡了speed, utility, quality，将高16位与低16位异或来减少这种影响。设计者考虑到现在的 hashCode 分布的已经很不错了，而且当发生较大碰撞时也用树形存储降低了冲突。仅仅异或一下，既减少了系统的开销，也不会造成的因为高位没有参与下标的计算（table 长度比较小时），从而引起的碰撞。</p>
@@ -240,6 +246,7 @@
 
 
 
+<p>有的地方也称这段代码为”<strong>扰动函数</strong>“，并做了做实验对比了添加”扰动函数“之后冲突减少的比例（达10%）。参考 <a href="https://www.zhihu.com/question/20733617/answer/111577937" target="_blank" rel="noopener">https://www.zhihu.com/question/20733617/answer/111577937</a></p>
 <p>–</p>
 <p>文章参考来源：<a href="https://www.cnblogs.com/liujinhong/p/6576543.html" target="_blank" rel="noopener">https://www.cnblogs.com/liujinhong/p/6576543.html</a></p>
 
