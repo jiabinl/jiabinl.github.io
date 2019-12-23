@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-jiabinl.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-jiabinl.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="Jiabin's Blog" type="application/atom+xml">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="ConcurrentHashMap 锁粒度JDK8 中，ConcurrentHashMap 的锁粒度变小，不再是对 Segment 加锁，而是对桶的头结点加锁，这样大大提高的并发的性能。那么在没有锁的情况下，如何保证多个线程的 put 不会相互覆盖？无锁实现：for 循环 + CAS CAS，即 compareAndSwap，原子的执行比较并交换的操作：当前内存值如果和预期值相等，则将其更新为目标">
+<meta name="keywords" content="Java源码, ConcurrentHashMap, CAS">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JDK8 ConcurrentHashMap 用 CAS 取代 Segment 锁">
+<meta property="og:url" content="https:&#x2F;&#x2F;jiabinl.github.io&#x2F;2019&#x2F;12&#x2F;23&#x2F;java-concurrent-hashmap-lock-free-by-cas&#x2F;index.html">
+<meta property="og:site_name" content="Jiabin&#39;s Blog">
+<meta property="og:description" content="ConcurrentHashMap 锁粒度JDK8 中，ConcurrentHashMap 的锁粒度变小，不再是对 Segment 加锁，而是对桶的头结点加锁，这样大大提高的并发的性能。那么在没有锁的情况下，如何保证多个线程的 put 不会相互覆盖？无锁实现：for 循环 + CAS CAS，即 compareAndSwap，原子的执行比较并交换的操作：当前内存值如果和预期值相等，则将其更新为目标">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https:&#x2F;&#x2F;jiabinl.github.io&#x2F;2019&#x2F;12&#x2F;23&#x2F;java-concurrent-hashmap-lock-free-by-cas&#x2F;concurrent-hashmap-lock-granularity.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;jiabinl.github.io&#x2F;2019&#x2F;12&#x2F;23&#x2F;java-concurrent-hashmap-lock-free-by-cas&#x2F;concurrent-hashmap-put-security.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;jiabinl.github.io&#x2F;2019&#x2F;12&#x2F;23&#x2F;java-concurrent-hashmap-lock-free-by-cas&#x2F;concurrent-hashmap-put-security-2.png">
+<meta property="og:updated_time" content="2019-12-23T13:00:36.267Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https:&#x2F;&#x2F;jiabinl.github.io&#x2F;2019&#x2F;12&#x2F;23&#x2F;java-concurrent-hashmap-lock-free-by-cas&#x2F;concurrent-hashmap-lock-granularity.png">
+
+<link rel="canonical" href="https://jiabinl.github.io/2019/12/23/java-concurrent-hashmap-lock-free-by-cas/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>JDK8 ConcurrentHashMap 用 CAS 取代 Segment 锁 | Jiabin's Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Jiabin's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand posts-expand-all">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://jiabinl.github.io/2019/12/23/java-concurrent-hashmap-lock-free-by-cas/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Jiabin">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Jiabin's Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          JDK8 ConcurrentHashMap 用 CAS 取代 Segment 锁
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2019-12-23 20:33:37 / 修改时间：21:00:36" itemprop="dateCreated datePublished" datetime="2019-12-23T20:33:37+08:00">2019-12-23</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="ConcurrentHashMap-锁粒度"><a href="#ConcurrentHashMap-锁粒度" class="headerlink" title="ConcurrentHashMap 锁粒度"></a>ConcurrentHashMap 锁粒度</h2><p>JDK8 中，ConcurrentHashMap 的锁粒度变小，不再是对 Segment 加锁，而是对桶的头结点加锁，这样大大提高的并发的性能。</p><p><img src="concurrent-hashmap-lock-granularity.png" alt></p><p>那么在没有锁的情况下，如何保证多个线程的 put 不会相互覆盖？</p><p><img src="concurrent-hashmap-put-security.png" alt></p><h2 id="无锁实现：for-循环-CAS"><a href="#无锁实现：for-循环-CAS" class="headerlink" title="无锁实现：for 循环 + CAS"></a>无锁实现：for 循环 + CAS</h2><blockquote>
+<p>CAS，即 compareAndSwap，原子的执行比较并交换的操作：当前内存值如果和预期值相等，则将其更新为目标值，否则不更新。</p>
+</blockquote><a id="more"></a>
+
+
+
+
+<p>JDK8 通过 for 循环 + CAS 操作，实现并发安全的方式就是无锁算法（lock free）的经典实现。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">final</span> V <span class="title">putVal</span><span class="params">(K key, V value, <span class="keyword">boolean</span> onlyIfAbsent)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">int</span> hash = spread(key.hashCode());</span><br><span class="line">    <span class="keyword">for</span> (Node&lt;K,V&gt;[] tab = table;;) &#123;</span><br><span class="line">        ...</span><br><span class="line">        <span class="comment">//key定位到的hash桶为空</span></span><br><span class="line">        <span class="keyword">if</span> ((f = tabAt(tab, i = (n - <span class="number">1</span>) &amp; hash)) == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="comment">//cas设置tab[i]的头结点。</span></span><br><span class="line">            <span class="keyword">if</span> (casTabAt(tab, i, <span class="keyword">null</span>,</span><br><span class="line">                         <span class="keyword">new</span> Node&lt;K,V&gt;(hash, key, value, <span class="keyword">null</span>)))</span><br><span class="line">                <span class="keyword">break</span>;   <span class="comment">//设置成功，跳出for循环</span></span><br><span class="line">            </span><br><span class="line">            <span class="comment">//设置失败，说明tab[i]已经被另一个线程修改了。回到for循环开始处，</span></span><br><span class="line">            <span class="comment">//重新判断hash桶是否为空。如何往复，直到设置成功，或者hash桶不空。</span></span><br><span class="line">        &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">           <span class="keyword">synchronized</span> (f) &#123;</span><br><span class="line">               <span class="comment">//</span></span><br><span class="line">           &#125;</span><br><span class="line">            </span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如下图所示，在不加锁的情况下：线程 A 成功执行 casTabAt 操作后，随后的线程 B 可以通过 tabAt 方法立刻看到 table[i] 的改变。原因如下：线程 A 的 casTabAt 操作，具有 volatile 读写相同的内存语义，根据 volatile 的happens-before 规则：线程 A 的 casTabAt 操作，一定对线程 B 的 tabAt 操作可见。</p>
+<p><img src="concurrent-hashmap-put-security-2.png" alt="ConcurrentHashMap 两个线程同时往一个空桶 put"></p>
+<p>Java 原子类的自增操作，也是通过 for 循环 + CAS 操作的方式实现的：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//JDK7版本的 AtomicInteger 类的原子自增操作</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">int</span> <span class="title">getAndIncrement</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (;;) &#123;</span><br><span class="line">        <span class="comment">//获取value</span></span><br><span class="line">        <span class="keyword">int</span> current = get();</span><br><span class="line">        <span class="keyword">int</span> next = current + <span class="number">1</span>;</span><br><span class="line">        <span class="comment">//value值没有变，说明其他线程没有自增过,将value设置为next</span></span><br><span class="line">        <span class="keyword">if</span> (compareAndSet(current, next))</span><br><span class="line">            <span class="keyword">return</span> current;</span><br><span class="line">        <span class="comment">//否则说明value值已经改变，回到循环开始处，重新获取value。</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>参考：<a href="https://www.jianshu.com/p/5bc70d9e5410" target="_blank" rel="noopener">[简书] ConcurrentHashMap源码分析（JDK8） get/put/remove方法分析</a></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>Jiabin
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://jiabinl.github.io/2019/12/23/java-concurrent-hashmap-lock-free-by-cas/" title="JDK8 ConcurrentHashMap 用 CAS 取代 Segment 锁">https://jiabinl.github.io/2019/12/23/java-concurrent-hashmap-lock-free-by-cas/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Java%E6%BA%90%E7%A0%81-ConcurrentHashMap-CAS/" rel="tag"># Java源码, ConcurrentHashMap, CAS</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2019/12/22/java-producer-consumer-implementation-using-wait-notify/" rel="next" title="用 Java 中的 wait 和 notify 实现简单的生产者消费者模型">
+                  <i class="fa fa-chevron-left"></i> 用 Java 中的 wait 和 notify 实现简单的生产者消费者模型
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#ConcurrentHashMap-锁粒度"><span class="nav-number">1.</span> <span class="nav-text">ConcurrentHashMap 锁粒度</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#无锁实现：for-循环-CAS"><span class="nav-number">2.</span> <span class="nav-text">无锁实现：for 循环 + CAS</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Jiabin</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">9</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://jiabinl.github.io/" title="https:&#x2F;&#x2F;jiabinl.github.io">Jiabin's Blog</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Jiabin</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.0.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v7.5.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+<script src="/js/utils.js"></script><script src="/js/motion.js"></script>
+<script src="/js/schemes/pisces.js"></script>
+<script src="/js/next-boot.js"></script>
+
+
+
+  
+  <script>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

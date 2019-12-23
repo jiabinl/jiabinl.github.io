@@ -172,6 +172,74 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://jiabinl.github.io/2019/12/23/java-concurrent-hashmap-lock-free-by-cas/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Jiabin">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Jiabin's Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/12/23/java-concurrent-hashmap-lock-free-by-cas/" class="post-title-link" itemprop="url">JDK8 ConcurrentHashMap 用 CAS 取代 Segment 锁</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2019-12-23 20:33:37 / 修改时间：21:00:36" itemprop="dateCreated datePublished" datetime="2019-12-23T20:33:37+08:00">2019-12-23</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="ConcurrentHashMap-锁粒度"><a href="#ConcurrentHashMap-锁粒度" class="headerlink" title="ConcurrentHashMap 锁粒度"></a>ConcurrentHashMap 锁粒度</h2><p>JDK8 中，ConcurrentHashMap 的锁粒度变小，不再是对 Segment 加锁，而是对桶的头结点加锁，这样大大提高的并发的性能。</p><p><img src="concurrent-hashmap-lock-granularity.png" alt></p><p>那么在没有锁的情况下，如何保证多个线程的 put 不会相互覆盖？</p><p><img src="concurrent-hashmap-put-security.png" alt></p><h2 id="无锁实现：for-循环-CAS"><a href="#无锁实现：for-循环-CAS" class="headerlink" title="无锁实现：for 循环 + CAS"></a>无锁实现：for 循环 + CAS</h2><blockquote>
+<p>CAS，即 compareAndSwap，原子的执行比较并交换的操作：当前内存值如果和预期值相等，则将其更新为目标值，否则不更新。</p>
+</blockquote>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2019/12/23/java-concurrent-hashmap-lock-free-by-cas/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="https://jiabinl.github.io/2019/12/22/java-producer-consumer-implementation-using-wait-notify/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -771,12 +839,12 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-count">9</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
-        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-count">8</span>
         <span class="site-state-item-name">标签</span>
       </div>
   </nav>
